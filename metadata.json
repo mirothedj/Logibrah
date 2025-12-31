@@ -1,0 +1,5 @@
+{
+  "name": "Logibra Invariant Resolver",
+  "description": "A stateless, logic-circuit execution engine based on quadrant-dominant geometric algebra. It terminates ambiguity through structural cancellation.",
+  "requestFramePermissions": []
+}

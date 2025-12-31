@@ -1,0 +1,253 @@
+import React, { useState } from 'react';
+import { GoogleGenAI } from '@google/genai';
+import { parseAndReduce, stringifyAST } from './logibra-engine';
+import { ExecutionResult, AppMode } from './types';
+import TerminatorConsole from './components/TerminatorConsole';
+import QuadrantScope from './components/QuadrantScope';
+import VirtualKeyboard from './components/VirtualKeyboard';
+import CodeTranslator from './components/CodeTranslator';
+import DocumentationViewer from './components/DocumentationViewer';
+
+const App = () => {
+  const [input, setInput] = useState('');
+  const [history, setHistory] = useState<ExecutionResult[]>([]);
+  const [currentResult, setCurrentResult] = useState<ExecutionResult | null>(null);
+  const [nlLoading, setNlLoading] = useState(false);
+  const [showDocs, setShowDocs] = useState(false);
+  const [showCode, setShowCode] = useState(false);
+  const [mode, setMode] = useState<AppMode>('logibra');
+
+  // Theme Config
+  const getTheme = () => {
+    switch (mode) {
+      case 'python':
+        return {
+          title: 'text-blue-500',
+          glow: 'drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]',
+          inputBorder: 'focus:border-blue-500 focus:ring-blue-900',
+          inputText: 'text-blue-400'
+        };
+      case 'haskell':
+        return {
+          title: 'text-purple-500',
+          glow: 'drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]',
+          inputBorder: 'focus:border-purple-500 focus:ring-purple-900',
+          inputText: 'text-purple-400'
+        };
+      default:
+        return {
+          title: 'text-emerald-500',
+          glow: 'drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]',
+          inputBorder: 'focus:border-emerald-500 focus:ring-emerald-900',
+          inputText: 'text-emerald-400'
+        };
+    }
+  };
+
+  const theme = getTheme();
+
+  // Intent Translator using Gemini
+  const handleNaturalLanguage = async () => {
+    if (!input.trim() || !process.env.API_KEY) return;
+    
+    setNlLoading(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const model = 'gemini-2.5-flash-latest';
+      
+      const prompt = `
+        You are an expert in the "Logibra" logic system. 
+        Translate the user's natural language intent into valid Logibra syntax string.
+        
+        Grammar:
+        - Unit: *
+        - Flow: ->
+        - Relation: &
+        - Polarities: /+ (Up-Right), \\+ (Down-Right), /- (Down-Left), \\- (Up-Left)
+        - Anchor: @ (e.g., *@)
+        - Prime: ' (e.g., *')
+        - Grouping: ()
+        
+        Rules:
+        - "Advancing" usually means Right (either /+ or \\+)
+        - "Receding" usually means Left (either /- or \\-)
+        - "Opposing" means finding the inverse.
+        
+        Example: "Cancel an anchored unit against a receding flow" -> (*@ -> /+) & (*@ -> \\-) (One possible interpretation of cancellation)
+        Example: "Two advancing units" -> (* -> /+) & (* -> \\+)
+
+        Only return the syntax string. No markdown, no explanation.
+        User Input: "${input}"
+      `;
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+      });
+
+      const translated = response.text?.trim() || '';
+      if (translated) {
+        setInput(translated);
+      }
+    } catch (e) {
+      console.error("Translation failed", e);
+      alert("Failed to translate intent. Check API Key.");
+    } finally {
+      setNlLoading(false);
+    }
+  };
+
+  const execute = () => {
+    if (!input.trim()) return;
+    
+    const result = parseAndReduce(input);
+    const executionEntry: ExecutionResult = {
+      input,
+      ast: result.ast,
+      reduced: result.reduced,
+      error: result.error,
+      timestamp: Date.now()
+    };
+
+    setHistory(prev => [...prev, executionEntry]);
+    setCurrentResult(executionEntry);
+    setInput('');
+  };
+
+  // Keyboard handlers
+  const handleInput = (char: string) => setInput(prev => prev + char);
+  const handleBackspace = () => setInput(prev => prev.slice(0, -1));
+  const handleClear = () => {
+    setInput('');
+    setCurrentResult(null);
+  };
+
+  return (
+    <div className={`min-h-screen flex flex-col items-center py-8 px-4 sm:px-6 relative transition-colors duration-500 ${mode === 'python' ? 'bg-[#050914]' : mode === 'haskell' ? 'bg-[#0a0514]' : 'bg-[#050505]'}`}>
+      
+      {/* Code Translator Overlay */}
+      {showCode && (
+        <CodeTranslator 
+          ast={currentResult?.ast || null} 
+          onClose={() => setShowCode(false)} 
+        />
+      )}
+
+      {/* Documentation Overlay */}
+      {showDocs && (
+        <DocumentationViewer 
+          onClose={() => setShowDocs(false)} 
+          mode={mode}
+        />
+      )}
+
+      {/* Top Right Learning Button */}
+      <button 
+        onClick={() => setShowDocs(true)}
+        className="absolute top-4 right-4 sm:top-8 sm:right-8 flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-full border border-slate-600 shadow-lg transition-transform hover:scale-105 z-10 font-bold tracking-wide text-xs sm:text-sm"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-yellow-400">
+           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+        </svg>
+        <span>LEARNING</span>
+      </button>
+
+      {/* Header with Mode Switcher */}
+      <header className="mb-8 text-center space-y-4 w-full flex flex-col items-center">
+        <div>
+          <h1 className={`text-4xl sm:text-5xl font-bold tracking-tighter transition-colors duration-500 ${theme.title} ${theme.glow}`}>
+            LOGIBRA
+          </h1>
+          <p className="text-slate-400 text-sm font-mono tracking-widest uppercase">
+            Invariant Resolver Engine
+          </p>
+        </div>
+
+        {/* Mode Switcher */}
+        <div className="flex space-x-2 bg-slate-900/80 p-1 rounded-lg border border-slate-800 backdrop-blur-sm">
+          {(['logibra', 'python', 'haskell'] as AppMode[]).map((m) => (
+             <button
+               key={m}
+               onClick={() => setMode(m)}
+               className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                 mode === m 
+                   ? (m === 'python' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : m === 'haskell' ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/50' : 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50') 
+                   : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
+               }`}
+             >
+               {m}
+             </button>
+          ))}
+        </div>
+      </header>
+
+      <main className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Col: Visuals & Input (lg:col-span-5) */}
+        <div className="lg:col-span-5 flex flex-col space-y-6">
+           {/* Visualizer */}
+           <div className="flex justify-center">
+             <QuadrantScope 
+                ast={currentResult?.ast || null} 
+                reduced={currentResult?.reduced || null} 
+             />
+           </div>
+
+           {/* Input Area */}
+           <div className="flex flex-col space-y-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Enter structural intent..."
+                  className={`w-full bg-slate-950 font-mono p-4 pr-12 rounded border border-slate-700 focus:outline-none focus:ring-1 shadow-inner transition-colors duration-300 ${theme.inputBorder} ${theme.inputText}`}
+                />
+                <div className="absolute right-2 top-2 flex space-x-2">
+                   {process.env.API_KEY && (
+                     <button 
+                       onClick={handleNaturalLanguage}
+                       disabled={nlLoading}
+                       className="text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded hover:bg-slate-700 transition-colors disabled:opacity-50"
+                       title="Translate Natural Language to Logibra"
+                     >
+                       {nlLoading ? 'Thinking...' : 'AI Input'}
+                     </button>
+                   )}
+                </div>
+              </div>
+              
+              <VirtualKeyboard 
+                onInput={handleInput} 
+                onClear={handleClear} 
+                onBackspace={handleBackspace} 
+                onExecute={execute}
+                mode={mode}
+              />
+           </div>
+        </div>
+
+        {/* Right Col: Console & Docs (lg:col-span-7) */}
+        <div className="lg:col-span-7 flex flex-col h-[600px] lg:h-auto">
+          <div className="flex-1 min-h-0 relative">
+             <TerminatorConsole history={history} />
+             
+             {/* Controls Container (Code Only now, Docs moved to top) */}
+             <div className="absolute top-2 right-2 flex space-x-2">
+               {/* Code Toggle */}
+               <button 
+                 onClick={() => setShowCode(true)}
+                 className={`text-slate-500 transition-colors font-mono text-xs border border-slate-700 px-2 py-1 rounded hover:border-opacity-50 ${mode === 'python' ? 'hover:text-blue-400 hover:border-blue-500' : mode === 'haskell' ? 'hover:text-purple-400 hover:border-purple-500' : 'hover:text-emerald-400 hover:border-emerald-500'}`}
+               >
+                 &lt;/&gt; CODE
+               </button>
+             </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  );
+};
+
+export default App;
