@@ -1,25 +1,20 @@
-# Logibra Execution Engine (v1.0)
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-## Overview
-A stateless, logic-circuit execution engine based on quadrant-dominant geometric algebra.
-Core constant: Φx (Phi-sub-x).
-Resolution state: `**` (Double Asterisk).
+# Run and deploy your AI Studio app
 
-## Keyboard Grammar (ASCII)
-- Unit:       `*`
-- Resolution: `**`
-- Relation:   `&`
-- Flow:       `->`
-- Polarity:   `/+`, `\+` (Advancing) | `/-`, `\-` (Receding)
-- Modifiers:  `@` (Anchor), `'` (Prime), `,` (Pause)
-- Grouping:   `()`
+This contains everything you need to run your app locally.
 
-## Quadrant Logic (Reduction Rules)
-Resolution (`**`) only occurs upon **Total Inversion**:
-1. `* -> /+` cancels `* -> \-` (Up-Right vs Down-Left)
-2. `* -> \+` cancels `* -> /-` (Down-Right vs Up-Left)
-All other combinations remain unresolved.
+View your app in AI Studio: https://ai.studio/apps/drive/1FJ7DAfTemKaMUEeVI2xROd5y232Sda3S
 
-## Usage
-Run `python logibra.py` for the reference implementation.
-Run `python logibra_test.py` for the certification suite.
+## Run Locally
+
+**Prerequisites:**  Node.js
+
+
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

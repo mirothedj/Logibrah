@@ -1,88 +1,68 @@
-/*
-============================================================
-LOGIBRA - NON-COMMERCIAL ABSOLUTE LOCK (NC-AL v1.0)
-
-THIS WORK IS NOT ARTIFICIAL INTELLIGENCE.
-
-THIS WORK:
-- IS NOT AI
-- IS NOT MACHINE LEARNING
-- IS NOT TRAINABLE
-- IS NOT DATA-DRIVEN
-- IS NOT OPTIMIZATION
-- IS NOT INFERENCE
-- IS NOT DESIGNED FOR AI SYSTEMS
-
-ABSOLUTE PROHIBITIONS:
-- NO COMMERCIAL USE
-- NO PROFIT OF ANY KIND
-- NO INSTITUTIONAL PROFIT
-- NO PATENTS
-- NO LICENSING
-- NO AI TRAINING
-- NO AI DATASETS
-- NO AI DERIVATIVES
-- NO AI-ADJACENT USE
-
-ANY USE FOR AI PURPOSES OR PROFIT
-IMMEDIATELY VOIDS ALL RIGHTS.
-
-LICENSE: Logibra NC-AL v1.0
-SEE: LICENSE.NC-AL
-============================================================
-*/
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { GoogleGenAI } from '@google/genai';
 import { parseAndReduce, stringifyAST } from './logibra-engine';
-import { ExecutionResult, AppMode } from './types';
+import { ExecutionResult } from './types';
 import TerminatorConsole from './components/TerminatorConsole';
 import QuadrantScope from './components/QuadrantScope';
 import VirtualKeyboard from './components/VirtualKeyboard';
-import CodeTranslator from './components/CodeTranslator';
-import LearningSidebar from './components/LearningSidebar';
 
 const App = () => {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<ExecutionResult[]>([]);
   const [currentResult, setCurrentResult] = useState<ExecutionResult | null>(null);
-  
-  // Sidebar State
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
-  const [showCode, setShowCode] = useState(false);
-  const [mode, setMode] = useState<AppMode>('logibra');
+  const [nlLoading, setNlLoading] = useState(false);
+  const [showDocs, setShowDocs] = useState(false);
 
-  // Theme Config
-  const getTheme = () => {
-    switch (mode) {
-      case 'python':
-        return {
-          title: 'text-blue-500',
-          glow: 'drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]',
-          inputBorder: 'focus:border-blue-500 focus:ring-blue-900',
-          inputText: 'text-blue-400',
-          btnActive: 'bg-blue-900/80 border-blue-500 text-white'
-        };
-      case 'haskell':
-        return {
-          title: 'text-purple-500',
-          glow: 'drop-shadow-[0_0_15px_rgba(168,85,247,0.6)]',
-          inputBorder: 'focus:border-purple-500 focus:ring-purple-900',
-          inputText: 'text-purple-400',
-          btnActive: 'bg-purple-900/80 border-purple-500 text-white'
-        };
-      default:
-        return {
-          title: 'text-emerald-500',
-          glow: 'drop-shadow-[0_0_15px_rgba(16,185,129,0.6)]',
-          inputBorder: 'focus:border-emerald-500 focus:ring-emerald-900',
-          inputText: 'text-emerald-400',
-          btnActive: 'bg-emerald-900/80 border-emerald-500 text-white'
-        };
+  // Intent Translator using Gemini
+  const handleNaturalLanguage = async () => {
+    if (!input.trim() || !process.env.API_KEY) return;
+    
+    setNlLoading(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const model = 'gemini-2.5-flash-latest';
+      
+      const prompt = `
+        You are an expert in the "Logibra" logic system. 
+        Translate the user's natural language intent into valid Logibra syntax string.
+        
+        Grammar:
+        - Unit: *
+        - Flow: ->
+        - Relation: &
+        - Polarities: /+ (Up-Right), \\+ (Down-Right), /- (Down-Left), \\- (Up-Left)
+        - Anchor: @ (e.g., *@)
+        - Prime: ' (e.g., *')
+        - Grouping: ()
+        
+        Rules:
+        - "Advancing" usually means Right (either /+ or \\+)
+        - "Receding" usually means Left (either /- or \\-)
+        - "Opposing" means finding the inverse.
+        
+        Example: "Cancel an anchored unit against a receding flow" -> (*@ -> /+) & (*@ -> \\-) (One possible interpretation of cancellation)
+        Example: "Two advancing units" -> (* -> /+) & (* -> \\+)
+
+        Only return the syntax string. No markdown, no explanation.
+        User Input: "${input}"
+      `;
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+      });
+
+      const translated = response.text?.trim() || '';
+      if (translated) {
+        setInput(translated);
+      }
+    } catch (e) {
+      console.error("Translation failed", e);
+      alert("Failed to translate intent. Check API Key.");
+    } finally {
+      setNlLoading(false);
     }
   };
-
-  const theme = getTheme();
 
   const execute = () => {
     if (!input.trim()) return;
@@ -110,67 +90,16 @@ const App = () => {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col items-center py-8 px-4 sm:px-6 relative transition-colors duration-500 ${mode === 'python' ? 'bg-[#050914]' : mode === 'haskell' ? 'bg-[#0a0514]' : 'bg-[#050505]'}`}>
+    <div className="min-h-screen flex flex-col items-center py-8 px-4 sm:px-6">
       
-      {/* Code Translator Overlay */}
-      {showCode && (
-        <CodeTranslator 
-          ast={currentResult?.ast || null} 
-          onClose={() => setShowCode(false)} 
-        />
-      )}
-
-      {/* Learning Sidebar */}
-      <LearningSidebar 
-        isOpen={isSidebarOpen} 
-        onClose={() => setIsSidebarOpen(false)}
-        mode={mode}
-      />
-
-      {/* Top Left Learning Button */}
-      <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 flex flex-col items-start">
-        <button 
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className={`flex items-center space-x-2 px-5 py-2.5 rounded-full border shadow-2xl transition-all hover:scale-105 font-bold tracking-wide text-xs sm:text-sm group ${
-            isSidebarOpen 
-              ? theme.btnActive 
-              : 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700'
-          }`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={`w-5 h-5 transition-transform duration-300 ${isSidebarOpen ? '-rotate-90' : ''} ${mode === 'python' ? 'text-yellow-400' : mode === 'haskell' ? 'text-purple-300' : 'text-yellow-400'}`}>
-             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-          </svg>
-          <span>LEARNING</span>
-        </button>
-      </div>
-
-      {/* Header with Mode Switcher */}
-      <header className="mb-8 text-center space-y-4 w-full flex flex-col items-center mt-12 sm:mt-0">
-        <div>
-          <h1 className={`text-4xl sm:text-5xl font-bold tracking-tighter transition-colors duration-500 ${theme.title} ${theme.glow}`}>
-            LOGIBRA
-          </h1>
-          <p className="text-slate-400 text-sm font-mono tracking-widest uppercase">
-            Invariant Resolver Engine
-          </p>
-        </div>
-
-        {/* Mode Switcher */}
-        <div className="flex space-x-2 bg-slate-900/80 p-1.5 rounded-lg border border-slate-800 backdrop-blur-sm shadow-xl">
-          {(['logibra', 'python', 'haskell'] as AppMode[]).map((m) => (
-             <button
-               key={m}
-               onClick={() => setMode(m)}
-               className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
-                 mode === m 
-                   ? (m === 'python' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 scale-105' : m === 'haskell' ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/50 scale-105' : 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50 scale-105') 
-                   : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
-               }`}
-             >
-               {m}
-             </button>
-          ))}
-        </div>
+      {/* Header */}
+      <header className="mb-8 text-center space-y-2">
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tighter text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+          LOGIBRA
+        </h1>
+        <p className="text-slate-400 text-sm font-mono tracking-widest uppercase">
+          Invariant Resolution Engine
+        </p>
       </header>
 
       <main className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -193,8 +122,20 @@ const App = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Enter structural intent..."
-                  className={`w-full bg-slate-950 font-mono p-4 pr-12 rounded border border-slate-700 focus:outline-none focus:ring-1 shadow-inner transition-colors duration-300 ${theme.inputBorder} ${theme.inputText}`}
+                  className="w-full bg-slate-950 text-emerald-400 font-mono p-4 pr-12 rounded border border-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-900 shadow-inner"
                 />
+                <div className="absolute right-2 top-2">
+                   {process.env.API_KEY && (
+                     <button 
+                       onClick={handleNaturalLanguage}
+                       disabled={nlLoading}
+                       className="text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded hover:bg-emerald-900/50 transition-colors disabled:opacity-50"
+                       title="Translate Natural Language to Logibra"
+                     >
+                       {nlLoading ? 'Thinking...' : 'AI Input'}
+                     </button>
+                   )}
+                </div>
               </div>
               
               <VirtualKeyboard 
@@ -202,7 +143,6 @@ const App = () => {
                 onClear={handleClear} 
                 onBackspace={handleBackspace} 
                 onExecute={execute}
-                mode={mode}
               />
            </div>
         </div>
@@ -212,16 +152,49 @@ const App = () => {
           <div className="flex-1 min-h-0 relative">
              <TerminatorConsole history={history} />
              
-             {/* Controls Container (Code Only) */}
-             <div className="absolute top-2 right-2 flex space-x-2">
-               {/* Code Toggle */}
-               <button 
-                 onClick={() => setShowCode(true)}
-                 className={`text-slate-500 transition-colors font-mono text-xs border border-slate-700 px-2 py-1 rounded hover:border-opacity-50 ${mode === 'python' ? 'hover:text-blue-400 hover:border-blue-500' : mode === 'haskell' ? 'hover:text-purple-400 hover:border-purple-500' : 'hover:text-emerald-400 hover:border-emerald-500'}`}
-               >
-                 &lt;/&gt; CODE
-               </button>
-             </div>
+             {/* Info Toggle */}
+             <button 
+               onClick={() => setShowDocs(!showDocs)}
+               className="absolute top-2 right-2 text-slate-500 hover:text-white transition-colors"
+             >
+               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+               </svg>
+             </button>
+
+             {/* Documentation Overlay */}
+             {showDocs && (
+               <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm p-6 overflow-y-auto border border-slate-700 rounded-lg z-10">
+                 <div className="flex justify-between items-center mb-4">
+                   <h3 className="text-xl font-bold text-white">System Reference</h3>
+                   <button onClick={() => setShowDocs(false)} className="text-slate-400 hover:text-white">✕</button>
+                 </div>
+                 <div className="space-y-4 text-sm text-slate-300 font-mono">
+                   <section>
+                     <h4 className="text-emerald-500 font-bold mb-1">Polarities & Quadrants</h4>
+                     <ul className="list-disc pl-4 space-y-1">
+                       <li><code className="text-cyan-400">/+</code> Up-Right (Q1)</li>
+                       <li><code className="text-cyan-400">\+</code> Down-Right (Q4)</li>
+                       <li><code className="text-cyan-400">/-</code> Down-Left (Q3)</li>
+                       <li><code className="text-cyan-400">\-</code> Up-Left (Q2)</li>
+                     </ul>
+                   </section>
+                   <section>
+                     <h4 className="text-emerald-500 font-bold mb-1">Resolution Logic</h4>
+                     <p className="mb-2">Resolution <code className="text-yellow-400">**</code> occurs only upon Total Inversion:</p>
+                     <ul className="list-disc pl-4 space-y-1">
+                       <li><code className="text-cyan-400">/+</code> cancels <code className="text-cyan-400">\-</code> (Opposite Slope & Sign)</li>
+                       <li><code className="text-cyan-400">\+</code> cancels <code className="text-cyan-400">/-</code></li>
+                     </ul>
+                   </section>
+                   <section>
+                     <h4 className="text-emerald-500 font-bold mb-1">Examples</h4>
+                     <p>Conflict: <code className="block bg-slate-800 p-1 rounded my-1">(* -> /+) & (* -> \-)</code> resolves to <code className="text-yellow-400">**</code></p>
+                     <p>No Conflict: <code className="block bg-slate-800 p-1 rounded my-1">(* -> /+) & (* -> /-)</code> remains unresolved</p>
+                   </section>
+                 </div>
+               </div>
+             )}
           </div>
         </div>
 
