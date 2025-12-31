@@ -127,8 +127,8 @@ const App = () => {
         mode={mode}
       />
 
-      {/* Top Right Learning Button */}
-      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 flex flex-col items-end">
+      {/* Top Left Learning Button */}
+      <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 flex flex-col items-start">
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className={`flex items-center space-x-2 px-5 py-2.5 rounded-full border shadow-2xl transition-all hover:scale-105 font-bold tracking-wide text-xs sm:text-sm group ${
@@ -137,7 +137,7 @@ const App = () => {
               : 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700'
           }`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={`w-5 h-5 transition-transform duration-300 ${isSidebarOpen ? 'rotate-90' : ''} ${mode === 'python' ? 'text-yellow-400' : mode === 'haskell' ? 'text-purple-300' : 'text-yellow-400'}`}>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={`w-5 h-5 transition-transform duration-300 ${isSidebarOpen ? '-rotate-90' : ''} ${mode === 'python' ? 'text-yellow-400' : mode === 'haskell' ? 'text-purple-300' : 'text-yellow-400'}`}>
              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
           </svg>
           <span>LEARNING</span>
@@ -145,7 +145,7 @@ const App = () => {
       </div>
 
       {/* Header with Mode Switcher */}
-      <header className="mb-8 text-center space-y-4 w-full flex flex-col items-center mt-8 sm:mt-0">
+      <header className="mb-8 text-center space-y-4 w-full flex flex-col items-center mt-12 sm:mt-0">
         <div>
           <h1 className={`text-4xl sm:text-5xl font-bold tracking-tighter transition-colors duration-500 ${theme.title} ${theme.glow}`}>
             LOGIBRA
