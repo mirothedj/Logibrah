@@ -33,7 +33,6 @@ SEE: LICENSE.NC-AL
 */
 
 import React, { useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { parseAndReduce, stringifyAST } from './logibra-engine';
 import { ExecutionResult, AppMode } from './types';
 import TerminatorConsole from './components/TerminatorConsole';
@@ -46,7 +45,6 @@ const App = () => {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<ExecutionResult[]>([]);
   const [currentResult, setCurrentResult] = useState<ExecutionResult | null>(null);
-  const [nlLoading, setNlLoading] = useState(false);
   
   // Sidebar State
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -85,57 +83,6 @@ const App = () => {
   };
 
   const theme = getTheme();
-
-  // Intent Translator using Gemini
-  const handleNaturalLanguage = async () => {
-    if (!input.trim() || !process.env.API_KEY) return;
-    
-    setNlLoading(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const model = 'gemini-2.5-flash-latest';
-      
-      const prompt = `
-        You are an expert in the "Logibra" logic system. 
-        Translate the user's natural language intent into valid Logibra syntax string.
-        
-        Grammar:
-        - Unit: *
-        - Flow: ->
-        - Relation: &
-        - Polarities: /+, \\+, /-, \\-
-        - Anchor: @ (e.g., *@)
-        - Prime: ' (e.g., *')
-        - Grouping: ()
-        
-        Rules:
-        - "Advancing" usually means Right (either /+ or \\+)
-        - "Receding" usually means Left (either /- or \\-)
-        - "Opposing" means finding the inverse.
-        
-        Example: "Cancel an anchored unit against a receding flow" -> (*@ -> /+) & (*@ -> \\-) (One possible interpretation of cancellation)
-        Example: "Two advancing units" -> (* -> /+) & (* -> \\+)
-
-        Only return the syntax string. No markdown, no explanation.
-        User Input: "${input}"
-      `;
-
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-      });
-
-      const translated = response.text?.trim() || '';
-      if (translated) {
-        setInput(translated);
-      }
-    } catch (e) {
-      console.error("Translation failed", e);
-      alert("Failed to translate intent. Check API Key.");
-    } finally {
-      setNlLoading(false);
-    }
-  };
 
   const execute = () => {
     if (!input.trim()) return;
@@ -248,18 +195,6 @@ const App = () => {
                   placeholder="Enter structural intent..."
                   className={`w-full bg-slate-950 font-mono p-4 pr-12 rounded border border-slate-700 focus:outline-none focus:ring-1 shadow-inner transition-colors duration-300 ${theme.inputBorder} ${theme.inputText}`}
                 />
-                <div className="absolute right-2 top-2 flex space-x-2">
-                   {process.env.API_KEY && (
-                     <button 
-                       onClick={handleNaturalLanguage}
-                       disabled={nlLoading}
-                       className="text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded hover:bg-slate-700 transition-colors disabled:opacity-50"
-                       title="Translate Natural Language to Logibra"
-                     >
-                       {nlLoading ? 'Thinking...' : 'AI Input'}
-                     </button>
-                   )}
-                </div>
               </div>
               
               <VirtualKeyboard 

@@ -42,7 +42,7 @@ interface CodeTranslatorProps {
 }
 
 const CodeTranslator: React.FC<CodeTranslatorProps> = ({ ast, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'py-live' | 'hs-live' | 'py-ref' | 'hs-ref' | 'ai-ref'>('py-live');
+  const [activeTab, setActiveTab] = useState<'py-live' | 'hs-live' | 'py-ref' | 'hs-ref'>('py-live');
 
   const pythonRef = `class Node: pass
 class Unit(Node):
@@ -129,38 +129,6 @@ reduce (Relation a b) = case (reduce a, reduce b) of
         if u1 == u2 && areInverses p1 p2 then Resolution else Relation (reduce a) (reduce b)
     (ra, rb) -> Relation ra rb`;
 
-  const aiRef = `import os
-import google.generativeai as genai
-
-# NOTE: The API key is securely handled by the environment.
-# In production, this value is never hardcoded.
-# The "**" represents the environmental variable placeholder.
-API_KEY = os.getenv("API_KEY", "**")
-
-genai.configure(api_key=API_KEY)
-
-def translate_intent(natural_language_input):
-    model = genai.GenerativeModel('gemini-2.5-flash-latest')
-    
-    prompt = f"""
-    Translate the following Natural Language to Logibra Syntax.
-    Rules:
-    - Unit: *
-    - Flow: ->
-    - Relation: &
-    - Polarity: /+, \\+, /-, \\-
-    
-    Input: {natural_language_input}
-    """
-    
-    response = model.generate_content(prompt)
-    return response.text
-
-# Example Usage
-# result = translate_intent("Cancel an anchored unit against a receding flow")
-# print(result)
-`;
-
   return (
     <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-md p-4 sm:p-8 overflow-hidden flex flex-col z-20 animate-in fade-in zoom-in-95 duration-200">
       <div className="flex justify-between items-center mb-6">
@@ -183,7 +151,6 @@ def translate_intent(natural_language_input):
           { id: 'hs-live', label: 'Live Haskell AST' },
           { id: 'py-ref', label: 'Ref: logibra.py' },
           { id: 'hs-ref', label: 'Ref: Logibra.hs' },
-          { id: 'ai-ref', label: 'Ref: AI Bridge' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -207,7 +174,6 @@ def translate_intent(natural_language_input):
             {activeTab === 'hs-live' && (ast ? toHaskellCode(ast) : '-- No input parsed yet')}
             {activeTab === 'py-ref' && pythonRef}
             {activeTab === 'hs-ref' && haskellRef}
-            {activeTab === 'ai-ref' && aiRef}
           </code>
         </pre>
         <div className="absolute top-2 right-2 px-2 py-1 bg-slate-800 rounded text-xs text-slate-500 font-mono">
