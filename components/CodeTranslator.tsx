@@ -134,7 +134,7 @@ reduce (Relation a b) = case (reduce a, reduce b) of
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white tracking-tight flex items-center space-x-2">
           <span className="text-emerald-500">◆</span>
-          <span>Translator & Reference</span>
+          <span>Engineering Reference & Translator</span>
         </h2>
         <button 
           onClick={onClose} 
@@ -142,6 +142,10 @@ reduce (Relation a b) = case (reduce a, reduce b) of
         >
           ✕ CLOSE
         </button>
+      </div>
+
+      <div className="mb-4 text-xs text-slate-400 font-mono">
+        IMMUTABLE REFERENCE MANUALS RESTORED. USE TABS TO VERIFY LOGIC.
       </div>
 
       {/* Tabs */}
