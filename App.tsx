@@ -117,12 +117,18 @@ const App = () => {
            {/* Input Area */}
            <div className="flex flex-col space-y-2">
               <div className="relative">
-                <input
-                  type="text"
+                <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      execute();
+                    }
+                  }}
+                  rows={3}
                   placeholder="Enter structural intent..."
-                  className="w-full bg-slate-950 text-emerald-400 font-mono p-4 pr-12 rounded border border-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-900 shadow-inner"
+                  className="w-full bg-slate-950 text-emerald-400 font-mono p-4 pr-12 rounded border border-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-900 shadow-inner resize-y"
                 />
                 <div className="absolute right-2 top-2">
                    {process.env.API_KEY && (
