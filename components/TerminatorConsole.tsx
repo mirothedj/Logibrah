@@ -33,7 +33,7 @@ const TerminatorConsole: React.FC<TerminatorConsoleProps> = ({ history }) => {
           <div key={idx} className="flex flex-col space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-start space-x-2">
               <span className="text-slate-500 text-xs mt-1">IN &gt;</span>
-              <span className="text-slate-300 break-all">{entry.input}</span>
+              <span className="text-slate-300 whitespace-pre-wrap break-all">{entry.input}</span>
             </div>
             
             {entry.error ? (
